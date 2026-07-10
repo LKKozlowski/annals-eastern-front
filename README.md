@@ -30,11 +30,12 @@ http://localhost:8544/#s=first-morning
 - A depleted German 1944-type grenadier Kampfgruppe with two grenadier battalions, mobile reserve, assault guns, antitank guns, pioneers, divisional artillery, and a mixed horse/motor supply column
 - A reinforced Soviet rifle regiment with three rifle battalions, an SMG company, sappers, antitank guns, attached T-34s/SU-76s, divisional artillery, and a transport column
 - Per-unit paper and actual strength, morale, fatigue, suppression, ammunition, fuel, armor, antitank ability, and entrenchment
-- Terrain- and weather-sensitive movement, local combat, artillery support, spotting, retreat, supply-column resupply, objective capture, and basic tactical AI
+- Lane- and phase-line movement, combat standoff ranges, friendly-unit separation, local reserves, terrain-sensitive maneuver, artillery support, spotting, retreat, supply-column resupply, and area objective capture
 - Umpire, Soviet, and German fog-of-war views
 - Redesigned operational counters that transition into representative low-poly soldiers, tanks, assault guns, artillery, antitank guns, trucks, horse carts, and supply dumps at close zoom
 - Non-graphic personnel-loss visualization: representative soldiers fade with effective strength; destroyed equipment leaves persistent wrecks with temporary smoke
-- Selectable counters and close models, inspectable TOE summaries, hold/dig/advance orders, watch mode, and a seeded combat journal
+- Selectable counters and close models, inspectable TOE summaries, hold/dig/advance orders, watch mode, and seeded message traffic
+- Separate Soviet and German report traffic: combat, logistics, maintenance, replacements, engineering, artillery, road, medical, strength, and command reports
 - A small test API at window.FRONT with stats(), step(), seed(), select(), and validate()
 
 ## Is the premise plausible?
@@ -75,6 +76,21 @@ The largest remaining historical abstraction is artillery. A Bagration breakthro
 3. The map is an umpire's model. Counters are oversized, forests are representative, and roads/villages are spatially meaningful rather than cartographically exact.
 4. Logistics should produce stories. Mud, ammunition, fuel, fatigue, and bridges create decisions instead of acting as decorative modifiers.
 5. The chronicle explains causality. Important changes become readable reports rather than hidden arithmetic.
+
+## Frontage and communications
+
+Units no longer path toward one universal objective. Rifle battalions receive northern, central, or southern lanes and advance through separate phase-line positions. Only the central assault package is routed through the main bridge; flank battalions probe local crossings and retain their own sectors. Units steer away from friendly concentrations and stop, shift laterally, or back off once they enter their useful engagement band.
+
+The two message panels are deliberately not an omniscient combat log. Each side sees its own internal traffic. The routing model favors lower headquarters:
+
+- battalion → regiment: 52%;
+- regiment → division: 24%;
+- division → corps: 13%;
+- corps → army: 6.5%;
+- army → Front or Army Group: 4.4%;
+- Front → STAVKA or Army Group → OKH: 0.1%.
+
+Routine traffic reflects actual generated state. Supply columns issue stores, workshops may return damaged vehicles to service, occasional replacement drafts reach depleted formations, and reports describe ammunition, fuel, transport, roads, engineering work, medical evacuation, observation, and command decisions.
 
 ## Fun next ideas
 

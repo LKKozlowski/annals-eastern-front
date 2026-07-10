@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="description" content="A procedurally generated 15 × 15 km Eastern Front sector, circa 1943–44. Seeded terrain, plausible battalion-scale forces, logistics, fog of war, and a living combat journal.">
+<meta name="description" content="A procedurally generated 15 × 15 km Eastern Front sector, circa 1943–44. Seeded terrain, plausible battalion-scale forces, logistics, fog of war, and two living command networks.">
 <meta name="theme-color" content="#1a211d">
 <title>The Sector — Eastern Front 1943–44</title>
 <style>
@@ -56,15 +56,16 @@ button{color:inherit}
 .oob-unit .meta{color:#92988e;font-size:9px;margin-top:1px}
 .oob-unit .str{font-variant-numeric:tabular-nums;color:#cfc9b8}
 .note{font-size:10px;line-height:1.4;color:#999f94;border-left:2px solid #6f755f;padding-left:9px;margin:10px 0}
-#journal{position:fixed;right:14px;bottom:74px;width:340px;max-height:245px;overflow:hidden;z-index:9;border-radius:3px}
-#journal header{display:flex;align-items:center;padding:9px 11px;border-bottom:1px solid rgba(217,207,179,.16)}
-#journal header span:first-child{font-family:Georgia,serif;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
-#journal header .live{margin-left:auto;font-size:9px;color:#98a092;text-transform:uppercase;letter-spacing:.12em}
-#events{max-height:205px;overflow:auto;padding:4px 11px 10px;scrollbar-width:thin}
-.event{font-family:Georgia,serif;font-size:12px;line-height:1.32;padding:6px 0;border-bottom:1px solid rgba(217,207,179,.08);color:#cec8b7}
-.event .time{font-family:Inter,system-ui,sans-serif;font-size:9px;color:#8e958b;letter-spacing:.08em;margin-right:6px}
-.event.combat{color:#e2c3b7}
-.event.objective{color:#e6d09b}
+#logs{position:fixed;right:14px;bottom:74px;width:min(690px,calc(100vw - 360px));display:grid;grid-template-columns:1fr 1fr;gap:8px;z-index:9}
+.journal{max-height:255px;overflow:hidden;border-radius:3px}
+.journal header{display:flex;align-items:center;padding:9px 11px;border-bottom:1px solid rgba(217,207,179,.16);border-top:3px solid var(--rule)}
+.journal.sov header{border-top-color:var(--red2)}.journal.ger header{border-top-color:var(--feld2)}
+.journal header span:first-child{font-family:Georgia,serif;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+.journal header .live{margin-left:auto;font-size:8px;color:#98a092;text-transform:uppercase;letter-spacing:.08em}
+.report-list{max-height:210px;overflow:auto;padding:3px 10px 10px;scrollbar-width:thin}
+.report{font-family:Georgia,serif;font-size:11px;line-height:1.3;padding:6px 0;border-bottom:1px solid rgba(217,207,179,.08);color:#c9c5b6}
+.report .wire{font-family:Inter,system-ui,sans-serif;font-size:8px;color:#8e958b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.report .time{color:#b6ad93;margin-right:5px}.report.combat{color:#e2c3b7}.report.objective{color:#e6d09b}.report.logistics{color:#c8d0b9}.report.command{color:#d8c897}
 #inspector{position:fixed;z-index:11;right:14px;top:78px;width:300px;border-radius:3px;display:none}
 #inspector.show{display:block}
 #inspector .ih{padding:12px 13px;border-bottom:1px solid rgba(217,207,179,.17);display:flex;gap:9px;align-items:flex-start}
@@ -104,7 +105,7 @@ button{color:inherit}
 @media(max-width:900px){
   #topbar{left:8px;right:8px;top:8px}#situation .metric:not(:first-child){display:none}
   #left{left:8px;top:70px;width:270px;max-height:calc(100vh - 132px)}
-  #journal{right:8px;bottom:65px;width:290px}
+  #logs{right:8px;bottom:65px;width:300px;grid-template-columns:1fr}.journal{max-height:142px}.report-list{max-height:100px}
   #inspector{right:8px;top:70px}
   #bottom{left:8px;right:8px;bottom:8px}
   .kbd,#mapScale{display:none}
@@ -112,7 +113,7 @@ button{color:inherit}
 @media(max-width:620px){
   #brand{min-width:0}#brand .mark{display:none}#brand h1{font-size:15px}#brand .sub{font-size:8px}
   #situation .metric{min-width:70px}#left{width:244px}
-  #journal{display:none}#inspector{width:calc(100vw - 16px);top:auto;bottom:66px}
+  #logs{display:none}#inspector{width:calc(100vw - 16px);top:auto;bottom:66px}
   #seedWrap label,#seedIn{display:none}
   #bottom{gap:4px;padding:6px}.control{min-width:31px;padding:0 7px}
 }
@@ -156,7 +157,7 @@ button{color:inherit}
   <section id="notesTab" class="tab hidden">
     <p class="brief">This is a generated tactical vignette, not a reconstruction of a named battle. The force packages follow period organizational patterns, then apply the severe under-strength conditions common in 1943–44.</p>
     <div class="note"><b>Map scale.</b> Counters are deliberately oversized. Zoom in to replace them with representative low-poly soldiers, guns, armored vehicles, and transport—not literal one-model-per-man formations.</div>
-    <div class="note"><b>Combat model.</b> Fire, cover, entrenchment, suppression, morale, fatigue, ammunition, weather, and local numerical advantage interact. Casualties are indicative, not a historical prediction.</div>
+    <div class="note"><b>Combat model.</b> Units keep assigned lanes, separate from friendly formations, and fight around useful weapon ranges instead of closing to one point. Cover, entrenchment, suppression, morale, fatigue, ammunition, weather, and local advantage interact.</div>
     <div class="note"><b>Casualty display.</b> Personnel figures fade away without gore as effective strength falls. Destroyed vehicles leave dark wrecks; smoke dissipates while the wreck remains.</div>
     <div class="note"><b>Omitted.</b> Corps-level artillery, air power, adjacent formations, medical evacuation, and rear services beyond the visible regimental transport columns are abstracted.</div>
   </section>
@@ -167,10 +168,10 @@ button{color:inherit}
   <div id="unitBody"></div>
 </aside>
 
-<section id="journal" class="panel">
-  <header><span>Combat journal</span><span class="live">seeded record</span></header>
-  <div id="events"></div>
-</section>
+<div id="logs">
+  <section class="journal sov panel"><header><span>Soviet traffic</span><span class="live">STAVKA 0.1%</span></header><div id="sovEvents" class="report-list"></div></section>
+  <section class="journal ger panel"><header><span>German traffic</span><span class="live">OKH 0.1%</span></header><div id="gerEvents" class="report-list"></div></section>
+</div>
 
 <div id="mapScale">1 kilometre<i></i></div>
 <div id="toast"></div>
@@ -244,6 +245,7 @@ function stream(seed){var h=xmur3(seed);return sfc32(h(),h(),h(),h());}
 function rr(r,a,b){return a+r()*(b-a);}
 function ri(r,a,b){return Math.floor(rr(r,a,b+1));}
 function pick(r,a){return a[Math.floor(r()*a.length)];}
+function chance(r,p){return r()<p;}
 function clamp(v,a,b){return v<a?a:v>b?b:v;}
 function lerp(a,b,t){return a+(b-a)*t;}
 function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
@@ -320,7 +322,7 @@ function makeWorld(seed){
   S={
     seed:seed,scenario:sc,rng:stream(seed+":sim"),detail:stream(seed+":detail"),noise:makeNoise(stream(seed+":terrain")),
     riverBase:rr(r,-1200,-350),riverPhase:rr(r,0,6.28),frontPhase:rr(r,0,6.28),
-    minute:sc.start,speed:6,paused:false,view:"umpire",events:[],units:[],objectives:[],roads:[],villages:[],
+    minute:sc.start,speed:6,paused:false,view:"umpire",reports:{ussr:[],germany:[]},reportSerial:0,units:[],objectives:[],roads:[],villages:[],
     sprites:[],orderLines:[],modelPickables:[],closeGroups:[],wrecks:[],representativeCount:0,
     sceneReady:false,gridOn:true,manualOrders:0,lastHour:-1,selectedId:null
   };
@@ -434,6 +436,49 @@ function generateForces(r){
   unit({side:"ussr",name:"Regimental transport column",parent:S.formations.ussr.name,kind:"logistics",echelon:"column",x:6550,z:2850,
     paperPersonnel:230,personnel:variation(r,185,.12),weapons:"Trucks, horse carts, ammunition wagons, fuel bowsers and field kitchens",guns:0,vehicles:variation(r,18,.18),
     attack:.08,defense:.32,at:.04,morale:.68,ammo:.4,fuel:.84,cargo:rr(r,.78,.98),order:{type:"support",x:5200,z:1600,label:"Maintain the forward distribution point"}});
+  assignOperationalRoutes();
+}
+function setUnitRoute(u,points){
+  u.route=points.map(function(p){return {x:clamp(p.x,-HALF+250,HALF-250),z:clamp(p.z,-HALF+250,HALF-250),label:p.label};});
+  u.routeIndex=0;u.laneZ=u.z;u.sectorAnchor={x:u.x,z:u.z};
+  if(u.route.length){var p=u.route[0];u.order={type:"advance",x:p.x,z:p.z,label:p.label};}
+}
+function advanceRoute(u){
+  if(!u.route||u.manual)return false;
+  if(u.routeIndex+1>=u.route.length)return false;
+  u.routeIndex++;var p=u.route[u.routeIndex];u.order={type:"advance",x:p.x,z:p.z,label:p.label};updateOrderLine(u);return true;
+}
+function assignOperationalRoutes(){
+  S.units.forEach(function(u){u.laneZ=u.z;u.sectorAnchor={x:u.x,z:u.z};u.route=[];u.routeIndex=-1;});
+  var rifle=S.units.filter(function(u){return u.side==="ussr"&&u.kind==="infantry";}).sort(function(a,b){return a.z-b.z;});
+  rifle.forEach(function(u,i){
+    var lane=u.z,front={x:frontX(lane)+180,z:lane};
+    if(i===1){
+      setUnitRoute(u,[
+        {x:front.x,z:front.z,label:"Advance within the central battalion lane"},
+        {x:S.bridge.x+360,z:S.bridge.z-220,label:"Secure the eastern bridge approach"},
+        {x:S.bridge.x-430,z:S.bridge.z-170,label:"Establish a bridgehead west of the river"},
+        {x:S.objectives[2].x+520,z:S.objectives[2].z+360,label:"Pressure the road junction from the south-east"}
+      ]);
+    }else{
+      var direction=i===0?-1:1,fordZ=lane+direction*180;
+      setUnitRoute(u,[
+        {x:front.x,z:front.z,label:"Advance in the "+(i===0?"southern":"northern")+" battalion lane"},
+        {x:riverX(fordZ)+260,z:fordZ,label:"Probe for a local river crossing"},
+        {x:riverX(fordZ)-720,z:fordZ+direction*220,label:"Hold the far-bank flank sector"}
+      ]);
+    }
+  });
+  var smg=S.units.find(function(u){return u.side==="ussr"&&u.kind==="assault";});
+  if(smg)setUnitRoute(smg,[{x:frontX(450)+450,z:450,label:"Follow the central rifle battalion"},{x:S.bridge.x+520,z:S.bridge.z+260,label:"Assemble east of the bridge"},{x:S.bridge.x-360,z:S.bridge.z+330,label:"Expand the northern bridgehead"}]);
+  var tank=S.units.find(function(u){return u.side==="ussr"&&u.name.indexOf("tank company")>=0;});
+  if(tank)setUnitRoute(tank,[{x:frontX(1050)+850,z:1050,label:"Move by bounds behind the infantry"},{x:S.bridge.x+760,z:S.bridge.z+520,label:"Await a cleared crossing"},{x:S.bridge.x-650,z:S.bridge.z+520,label:"Support the bridgehead without entering the village"}]);
+  var su=S.units.find(function(u){return u.side==="ussr"&&u.name.indexOf("SU-76")>=0;});
+  if(su)setUnitRoute(su,[{x:frontX(-1450)+720,z:-1450,label:"Take a direct-fire position in the southern lane"},{x:riverX(-1650)+850,z:-1650,label:"Support the local crossing from the east bank"}]);
+  var sapper=S.units.find(function(u){return u.side==="ussr"&&u.kind==="engineer";});
+  if(sapper)setUnitRoute(sapper,[{x:frontX(-700)+320,z:-700,label:"Open lanes through the obstacle belt"},{x:S.bridge.x+240,z:S.bridge.z-520,label:"Clear the southern bridge approach"}]);
+  var at=S.units.find(function(u){return u.side==="ussr"&&u.kind==="antitank";});
+  if(at)setUnitRoute(at,[{x:frontX(2650)+1050,z:2650,label:"Bound to a covered antitank position"},{x:frontX(2650)+420,z:2850,label:"Cover the northern battalion flank"}]);
 }
 
 function disposeScene(){
@@ -861,6 +906,17 @@ function nearestEnemy(u,maxRange){
   S.units.forEach(function(v){if(v.side!==u.side&&!v.destroyed){var d=dist(u,v);if(d<bd){bd=d;best=v;}}});
   return best?{unit:best,d:bd}:null;
 }
+function friendlySeparation(u){
+  var x=0,z=0,count=0,nearest=1e9;
+  S.units.forEach(function(v){
+    if(v===u||v.side!==u.side||v.destroyed)return;
+    var dx=u.x-v.x,dz=u.z-v.z,d=Math.hypot(dx,dz)||1;
+    var desired=(u.echelon==="battalion"&&v.echelon==="battalion")?900:((u.kind==="artillery"||u.kind==="logistics"||v.kind==="artillery"||v.kind==="logistics")?700:480);
+    nearest=Math.min(nearest,d);
+    if(d<desired){var force=(desired-d)/desired;x+=dx/d*force;z+=dz/d*force;count++;}
+  });
+  var len=Math.hypot(x,z);return {x:len?x/len:0,z:len?z/len:0,count:count,nearest:nearest};
+}
 function coverAt(u){
   var c=1;
   if(inForest(u.x,u.z))c*=.78;
@@ -878,6 +934,7 @@ function firepower(u){
 }
 function damage(shooter,target,minutes,artillery){
   if(shooter.ammo<=.03||target.destroyed)return;
+  var firstContact=!target.contactReported;
   var fp=firepower(shooter),cover=coverAt(target),range=dist(shooter,target),rangeF=artillery?1:clamp(1.25-range/(unitRange(shooter)*1.7),.35,1.1);
   var combined=1;
   S.units.forEach(function(a){if(a!==shooter&&a.side===shooter.side&&!a.destroyed&&dist(a,target)<1100)combined+=.09;});
@@ -886,8 +943,14 @@ function damage(shooter,target,minutes,artillery){
     var killChance=(shooter.at||.3)*raw*.045*(target.kind==="logistics"?1.8:1);
     if(S.rng()<killChance){
       target.vehicles=Math.max(0,target.vehicles-1);target.personnel=Math.max(0,target.personnel-ri(S.rng,2,5));spawnWreck(target);
-      if(target.kind==="logistics"){target.cargo=clamp(target.cargo-.07,0,1);logEvent("combat",shooter.name+" destroyed a vehicle in "+target.name+".",target.x,target.z);}
-      else logEvent("combat",shooter.name+" knocked out an armored vehicle of "+target.name+".",target.x,target.z);
+      if(target.kind==="logistics"){
+        target.cargo=clamp(target.cargo-.07,0,1);
+        addReport(shooter.side,"combat","Observed a transport vehicle burning in the enemy rear area.",shooter,target.x,target.z,0);
+        addReport(target.side,"logistics","One transport vehicle destroyed; surviving loads are being dispersed from the road.",target,target.x,target.z,0);
+      }else{
+        addReport(shooter.side,"combat","Antitank fire reports one enemy armored vehicle knocked out.",shooter,target.x,target.z,0);
+        addReport(target.side,"maintenance","One armored vehicle knocked out; recovery is impossible under current fire.",target,target.x,target.z,0);
+      }
     }
     if(target.kind==="armor")raw*=.32;
   }
@@ -897,6 +960,11 @@ function damage(shooter,target,minutes,artillery){
     target.morale=clamp(target.morale-losses/target.paperPersonnel*.52-raw*.001,0,1);
     target.suppression=clamp(target.suppression+raw*.012,0,1);
     shooter.firing=true;target.engaged=true;shooter.engaged=true;
+    if(firstContact){
+      target.contactReported=true;
+      addReport(shooter.side,"combat","Fire opened on an identified enemy position in the assigned sector.",shooter,target.x,target.z,0);
+      addReport(target.side,"combat","Enemy fire received; companies are engaging from dispersed positions.",target,target.x,target.z,0);
+    }
   }
   shooter.ammo=clamp(shooter.ammo-(artillery?.012:.0035)*(minutes/5),0,1);
 }
@@ -904,24 +972,38 @@ function retreatUnit(u,reason){
   if(u.order.type==="retreat"||u.destroyed)return;
   var x=u.side==="ussr"?HALF-300:-HALF+300;
   u.order={type:"retreat",x:x,z:clamp(u.z+rr(S.rng,-900,900),-HALF+300,HALF-300),label:reason||"Falling back"};
-  logEvent("combat",u.name+" broke contact and began to fall back.",u.x,u.z);updateOrderLine(u);
+  addReport(u.side,"combat","Morale and local ammunition state require a controlled withdrawal to the next position.",u,u.x,u.z,0);updateOrderLine(u);
 }
 function updateMovement(u,minutes){
   if(u.destroyed)return;
-  var enemy=nearestEnemy(u,unitRange(u)*1.05),moving=u.order.type==="advance"||u.order.type==="retreat";
+  var enemy=nearestEnemy(u,unitRange(u)*1.2),moving=u.order.type==="advance"||u.order.type==="retreat",separation=friendlySeparation(u);
   if(moving){
     var dx=u.order.x-u.x,dz=u.order.z-u.z,d=Math.hypot(dx,dz);
-    if(d>75){
+    if(d>140){
       var base=(u.kind==="armor"?92:u.kind==="recon"?67:u.kind==="logistics"?62:u.kind==="artillery"?34:42);
-      var contact=enemy?(u.order.type==="retreat"?.75:.32):1;
+      var contact=enemy?(u.order.type==="retreat"?.82:.26):1,vx=dx/d,vz=dz/d;
+      if(enemy&&u.order.type!=="retreat"){
+        var ex=enemy.unit.x-u.x,ez=enemy.unit.z-u.z,ed=enemy.d,desired=unitRange(u)*(u.kind==="assault"?.68:.88),toward=(vx*ex+vz*ez)/Math.max(1,ed);
+        if(ed<desired&&toward>0){
+          var sign=(u.laneZ||u.z)>=enemy.unit.z?1:-1;vx=-ez/ed*sign;vz=ex/ed*sign;contact=.15;
+        }
+        if(ed<desired*.52){vx=-ex/ed*.85+separation.x*.6;vz=-ez/ed*.85+separation.z*.6;contact=.34;}
+      }
+      var separationWeight=separation.count ? .75 : 0;vx+=separation.x*separationWeight;vz+=separation.z*separationWeight;
+      var vl=Math.hypot(vx,vz)||1;vx/=vl;vz/=vl;
+      if(separation.count>2)contact*=.45;
       var pace=base*terrainMoveFactor(u)*(1-u.fatigue*.55)*contact*minutes;
-      u.x+=dx/d*Math.min(d,pace);u.z+=dz/d*Math.min(d,pace);u.fatigue=clamp(u.fatigue+minutes*.00055,0,1);
-    }else if(u.order.type!=="retreat"){u.order={type:"hold",x:u.x,z:u.z,label:"Holding ordered ground"};}
+      u.x+=vx*Math.min(d,pace);u.z+=vz*Math.min(d,pace);u.fatigue=clamp(u.fatigue+minutes*.00055,0,1);
+    }else if(u.order.type!=="retreat"){
+      if(!advanceRoute(u))u.order={type:"hold",x:u.x,z:u.z,label:"Holding the assigned sector"};
+    }
+  }else if(separation.nearest<310&&u.entrenchment<.55&&u.kind!=="logistics"){
+    var drift=8*minutes;u.x+=separation.x*drift;u.z+=separation.z*drift;
   }
   if(u.order.type==="dig"){
     u.entrenchment=clamp(u.entrenchment+minutes*.0024,0,1);u.fatigue=clamp(u.fatigue+minutes*.0002,0,1);
   }else if(!moving)u.fatigue=clamp(u.fatigue-minutes*.00065,0,1);
-  if(!enemy){u.suppression=clamp(u.suppression-minutes*.006,0,1);u.morale=clamp(u.morale+minutes*.00035,0,.9);}
+  if(!enemy){u.engaged=false;u.suppression=clamp(u.suppression-minutes*.006,0,1);u.morale=clamp(u.morale+minutes*.00035,0,.9);}
   if((u.x>(u.side==="ussr"?5200:99999)||u.x<(u.side==="germany"?-5200:-99999))&&!enemy){
     u.ammo=clamp(u.ammo+minutes*.0012,0,1);u.fuel=clamp(u.fuel+minutes*.0007,0,1);
     if(u.kind==="logistics")u.cargo=clamp(u.cargo+minutes*.0011,0,1);
@@ -934,7 +1016,7 @@ function updateMovement(u,minutes){
     }
   }
   if(u.personnel<=Math.max(18,u.paperPersonnel*.08)||((u.kind==="armor")&&u.vehicles<=0&&u.personnel<40)){
-    u.destroyed=true;u.eliminatedMinute=S.minute;u.sprite.visible=false;u.orderLine.visible=false;logEvent("combat",u.name+" ceased to exist as an effective formation.",u.x,u.z);
+    u.destroyed=true;u.eliminatedMinute=S.minute;u.sprite.visible=false;u.orderLine.visible=false;addReport(u.side,"combat","Final traffic: the formation can no longer hold a coherent sector. Survivors are moving to the rear.",u,u.x,u.z,1);
   }else if(u.morale<.25&&u.order.type!=="retreat")retreatUnit(u,"Morale collapse");
 }
 function updateCombat(minutes){
@@ -964,37 +1046,35 @@ function updateSpotting(){
 function updateObjectives(minutes){
   S.objectives.forEach(function(o){
     var sov=0,ger=0;
-    S.units.forEach(function(u){if(!u.destroyed&&dist(u,o)<520){if(u.side==="ussr")sov+=u.personnel;else ger+=u.personnel;}});
-    if(sov>ger*1.35&&sov>50){o.progress+=minutes*(sov/(ger+100))*.06;}
-    else if(ger>sov*1.35&&ger>50){o.progress-=minutes*(ger/(sov+100))*.06;}
+    S.units.forEach(function(u){var d=dist(u,o);if(!u.destroyed&&d<900){var weight=1-d/1350;if(u.side==="ussr")sov+=u.personnel*weight;else ger+=u.personnel*weight;}});
+    if(sov>ger*1.35&&sov>50){o.progress+=minutes*(sov/(ger+140))*.035;}
+    else if(ger>sov*1.35&&ger>50){o.progress-=minutes*(ger/(sov+140))*.035;}
     o.progress=clamp(o.progress,-100,100);
     var newOwner=o.progress>35?"ussr":o.progress<-35?"germany":o.owner;
     if(newOwner!==o.owner){
       o.owner=newOwner;o.progress=newOwner==="ussr"?40:-40;
       if(o.sprite.material.map)o.sprite.material.map.dispose();o.sprite.material.map=objectiveTexture(o);o.sprite.material.needsUpdate=true;
-      logEvent("objective",SIDE_NAMES[newOwner]+" troops secured "+o.name+".",o.x,o.z);
+      addReport(newOwner,"objective",o.name+" is reported secure; local units are establishing an all-round defense.",null,o.x,o.z,1);
+      addReport(newOwner==="ussr"?"germany":"ussr","objective",o.name+" can no longer be held; adjacent formations have been informed.",null,o.x,o.z,1);
       if(o.id==="bridge"&&newOwner==="ussr")activateGermanReserve();
     }
   });
 }
 function activateGermanReserve(){
   var res=S.units.filter(function(u){return u.side==="germany"&&(u.kind==="armor"||u.kind==="recon")&&!u.manual&&!u.destroyed;});
-  res.forEach(function(u){u.order={type:"advance",x:S.bridge.x,z:S.bridge.z,label:"Counterattack the bridgehead"};updateOrderLine(u);});
-  logEvent("command","The German mobile reserve was released toward the bridge.",S.bridge.x,S.bridge.z);
+  res.forEach(function(u,i){setUnitRoute(u,[{x:S.bridge.x-720,z:S.bridge.z+(i?620:-620),label:"Counterattack the bridgehead flank"}]);updateOrderLine(u);});
+  addReport("germany","command","Division releases the mobile reserve toward offset counterattack positions around the bridgehead.",null,S.bridge.x,S.bridge.z,1);
 }
 function aiOrders(){
-  var captured=S.objectives.filter(function(o){return o.owner==="ussr";}).length;
   S.units.forEach(function(u){
     if(u.destroyed||u.manual||u.order.type==="retreat"||u.kind==="artillery"||u.kind==="logistics")return;
-    if(u.side==="ussr"&&u.order.type==="hold"&&nearestEnemy(u,950)===null){
-      var target=S.objectives[Math.min(captured,S.objectives.length-1)];u.order={type:"advance",x:target.x,z:target.z,label:"Continue the regimental mission"};updateOrderLine(u);
-    }
+    if(u.side==="ussr"&&u.order.type==="hold"&&nearestEnemy(u,unitRange(u)*1.25)===null)advanceRoute(u);
     if(u.side==="germany"&&u.kind!=="logistics"&&u.entrenchment<.42&&u.order.type==="hold")u.order={type:"dig",x:u.x,z:u.z,label:"Improve field positions"};
   });
 }
 function stepSimulation(minutes){
   S.minute+=minutes;updateSpotting();S.units.forEach(function(u){updateMovement(u,minutes);});updateCombat(minutes);updateObjectives(minutes);aiOrders();
-  var hour=Math.floor(S.minute/60);if(hour!==S.lastHour){S.lastHour=hour;logEvent("time","The sector report for "+timeOnly(S.minute)+": "+summaryText()+".");}
+  var hour=Math.floor(S.minute/60);if(hour!==S.lastHour){S.lastHour=hour;generateRoutineReports("ussr");generateRoutineReports("germany");}
   refreshWorld();
 }
 function summaryText(){
@@ -1006,18 +1086,117 @@ function sideTotals(side){
   us.forEach(function(u){paper+=u.paperPersonnel;current+=u.destroyed?0:u.personnel;if(!u.destroyed){if(u.kind==="armor")armor+=u.vehicles||0;if(u.kind==="logistics")transport+=u.vehicles||0;}});
   return {paper:paper,current:current,armor:armor,transport:transport};
 }
+function dispersionStats(side){
+  var units=S.units.filter(function(u){return u.side===side&&!u.destroyed&&u.kind!=="artillery"&&u.kind!=="logistics";});
+  if(!units.length)return {active:0,maxCluster600m:0,zSpan:0};
+  var maxCluster=0,minZ=1e9,maxZ=-1e9;
+  units.forEach(function(u){var cluster=units.filter(function(v){return dist(u,v)<600;}).length;maxCluster=Math.max(maxCluster,cluster);minZ=Math.min(minZ,u.z);maxZ=Math.max(maxZ,u.z);});
+  return {active:units.length,maxCluster600m:maxCluster,zSpan:Math.round(maxZ-minZ)};
+}
 
 function dateParts(){
   var d=new Date(S.scenario.date+"T00:00:00Z");d.setUTCMinutes(S.minute);
   return {date:d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric",timeZone:"UTC"}),time:String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0")};
 }
 function timeOnly(min){var m=((Math.round(min)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");}
-function logEvent(type,text,x,z){
-  var e={type:type,text:text,time:S.minute,x:x,z:z};S.events.unshift(e);if(S.events.length>90)S.events.pop();renderEvents();
-  if(watchMode&&x!==undefined){flyTo(x,z,5600);watchUntil=performance.now()+5000;}
+function reportChannel(side,u,forcedTier){
+  var tier=forcedTier;
+  if(tier===undefined){
+    var q=S.rng();tier=q<.52?0:q<.76?1:q<.89?2:q<.955?3:q<.999?4:5;
+  }
+  var formation=u&&u.parent?u.parent:S.formations[side].name;
+  if(side==="ussr"){
+    var sov=[
+      [u?u.name:"Battalion net",formation],
+      [formation,"Rifle Division HQ"],
+      ["Rifle Division HQ","Rifle Corps HQ"],
+      ["Rifle Corps HQ","Army HQ"],
+      ["Army HQ","Front HQ"],
+      ["Front HQ","STAVKA"]
+    ];return {tier:tier,source:sov[tier][0],recipient:sov[tier][1]};
+  }
+  var ger=[
+    [u?u.name:"Bataillonsnetz",formation],
+    [formation,"Infanterie-Division HQ"],
+    ["Infanterie-Division HQ","Armeekorps"],
+    ["Armeekorps","Armee"],
+    ["Armee","Heeresgruppe"],
+    ["Heeresgruppe","OKH"]
+  ];return {tier:tier,source:ger[tier][0],recipient:ger[tier][1]};
 }
-function renderEvents(){
-  var el=document.getElementById("events");el.innerHTML=S.events.slice(0,22).map(function(e){return '<div class="event '+e.type+'"><span class="time">'+timeOnly(e.time)+'</span>'+esc(e.text)+"</div>";}).join("");
+function addReport(side,type,text,u,x,z,tier){
+  var channel=reportChannel(side,u,tier),r={id:++S.reportSerial,type:type,text:text,time:S.minute,x:x,z:z,source:channel.source,recipient:channel.recipient,tier:channel.tier};
+  S.reports[side].unshift(r);if(S.reports[side].length>120)S.reports[side].pop();renderReports(side);
+  if(watchMode&&x!==undefined&&(type==="combat"||type==="objective")){flyTo(x,z,5600);watchUntil=performance.now()+5000;}
+}
+function routineReportText(u){
+  var ammo=Math.round(u.ammo*100),morale=Math.round(u.morale*100),effective=Math.round(u.personnel);
+  if(u.kind==="logistics")return pick(S.rng,[
+    "Distribution point reports "+u.vehicles+" transport vehicles available; cargo stocks "+Math.round(u.cargo*100)+"%.",
+    "Road parties report "+(S.scenario.ground==="mud"?"deep mud and repeated towing delays":S.scenario.ground==="frozen"?"frozen ruts but passable verges":"soft shoulders; main road remains open")+"; fuel and ammunition traffic continues.",
+    "Quartermaster return: "+Math.round(u.cargo*100)+"% of allocated stores remain; field kitchens and veterinary section accounted for."
+  ]);
+  if(u.kind==="armor")return pick(S.rng,[
+    u.vehicles+" of "+u.maxVehicles+" armored vehicles operational; fuel "+Math.round(u.fuel*100)+"%, ammunition "+ammo+"%.",
+    "Maintenance party requests track links, lubricants and one recovery tractor; crews remain with their vehicles.",
+    "Engines inspected during the halt; "+u.vehicles+" vehicles can move on thirty minutes' notice."
+  ]);
+  if(u.kind==="artillery")return pick(S.rng,[
+    u.guns+" tubes reported in the firing group; ammunition state "+ammo+"%.",
+    "Forward observers are adjusting concentrations by map reference; communications with batteries remain "+(u.morale>.6?"serviceable":"intermittent")+".",
+    "Gun crews request replenishment of high explosive and propellant; current expenditure remains within allocation."
+  ]);
+  if(u.kind==="engineer")return pick(S.rng,[
+    "Engineer report: obstacle lanes marked, demolition stores "+ammo+"%, bridging reconnaissance continuing.",
+    "Mine-clearing parties report slow progress under observation; no heavy equipment lost.",
+    "Pioneer stores checked; wire, mines and demolition charges distributed by section."
+  ]);
+  if(u.kind==="antitank")return pick(S.rng,[
+    u.guns+" antitank guns remain in the battery return; ammunition "+ammo+"%.",
+    "Gun positions are being dispersed and alternate firing points prepared.",
+    "Prime movers and ammunition limbers are under cover; crews report no change in sector."
+  ]);
+  if(u.kind==="recon")return pick(S.rng,[
+    "Patrols report intermittent movement across the sector; no continuous enemy line confirmed.",
+    "Reconnaissance elements retain contact with both neighboring formations.",
+    "Listening posts and patrols report visibility reduced by terrain and scattered woodland."
+  ]);
+  return pick(S.rng,[
+    "Strength return: "+effective+" effective personnel; ammunition "+ammo+"%, morale estimate "+morale+"%.",
+    "Company commanders report positions occupied across the assigned frontage; supporting weapons are dispersed.",
+    "Runners confirm contact with both flanks; mortar and machine-gun ammunition is being redistributed.",
+    "Medical section has cleared the latest casualties to the collecting point; stretcher parties returned."
+  ]);
+}
+function attemptMaintenance(side){
+  var supply=S.units.find(function(u){return u.side===side&&u.kind==="logistics"&&!u.destroyed&&u.cargo>.08;});
+  var damaged=S.units.filter(function(u){return u.side===side&&u.kind==="armor"&&!u.destroyed&&u.vehicles<u.maxVehicles&&!u.engaged;});
+  if(supply&&damaged.length&&chance(S.rng,.12)){
+    var u=pick(S.rng,damaged);u.vehicles++;supply.cargo=clamp(supply.cargo-.025,0,1);
+    addReport(side,"maintenance","Recovery and workshop sections returned one armored vehicle to running order.",u,u.x,u.z,1);
+  }
+}
+function attemptReplacements(side){
+  var candidates=S.units.filter(function(u){return u.side===side&&!u.destroyed&&u.kind!=="logistics"&&u.personnel<u.paperPersonnel*.82&&!u.engaged;});
+  if(candidates.length&&chance(S.rng,.045)){
+    var u=pick(S.rng,candidates),n=ri(S.rng,8,24);u.personnel=Math.min(u.paperPersonnel,u.personnel+n);
+    addReport(side,"replacements",n+" replacements arrived from the divisional pool and were assigned to the unit train.",u,u.x,u.z,1);
+  }else if(chance(S.rng,.055)){
+    addReport(side,"replacements","Replacement draft remains at the divisional rear; allocation to forward units is postponed.",null,null,null,2);
+  }
+}
+function generateRoutineReports(side){
+  var units=S.units.filter(function(u){return u.side===side&&!u.destroyed;});
+  for(var i=0;i<3&&units.length;i++){var u=pick(S.rng,units);addReport(side,u.kind==="logistics"?"logistics":u.kind==="armor"?"maintenance":"routine",routineReportText(u),u,u.x,u.z);}
+  var totals=sideTotals(side),held=S.objectives.filter(function(o){return o.owner===side;}).length;
+  addReport(side,"command","Periodic situation return: "+fmt(totals.current)+" personnel effective, "+totals.armor+" armored vehicles operational, "+held+" mapped objectives held.",null,null,null,3);
+  attemptMaintenance(side);attemptReplacements(side);
+}
+function renderReports(side){
+  var id=side==="ussr"?"sovEvents":"gerEvents",el=document.getElementById(id);if(!el)return;
+  el.innerHTML=S.reports[side].slice(0,28).map(function(r){
+    return '<div class="report '+r.type+'"><div class="wire"><span class="time">'+timeOnly(r.time)+'</span>'+esc(r.source)+' → '+esc(r.recipient)+'</div>'+esc(r.text)+"</div>";
+  }).join("");
 }
 function toast(msg){var el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(function(){el.classList.remove("show");},1800);}
 function renderUI(){
@@ -1028,7 +1207,7 @@ function renderUI(){
   document.getElementById("scenarioTitle").textContent=S.scenario.title;
   document.getElementById("scenarioNote").textContent=S.scenario.note;
   document.getElementById("briefText").textContent=S.scenario.brief;
-  renderStrength();renderObjectives();renderOOB();renderEvents();renderInspector();
+  renderStrength();renderObjectives();renderOOB();renderReports("ussr");renderReports("germany");renderInspector();
 }
 function renderStrength(){
   var s=sideTotals("ussr"),g=sideTotals("germany"),sum=s.current+g.current,pct=sum?s.current/sum*100:50;
@@ -1126,8 +1305,9 @@ function forge(seed){
     setTimeout(function(){
       initThree();loadingStep("Assembling representative formations…");document.getElementById("seedIn").value=seed;
       history.replaceState(null,"","#s="+encodeURIComponent(seed));renderUI();
-      logEvent("command",S.scenario.brief);
-      logEvent("time","The generated sector opened at "+timeOnly(S.minute)+". Its formations are synthetic but period-shaped.");
+      addReport("ussr","command","Front directive: attack within assigned regimental lanes, secure crossings, and avoid premature concentration on the road junction.",null,null,null,4);
+      addReport("germany","command","Division order: hold dispersed fieldworks and road approaches; commit the mobile reserve only against a confirmed crossing.",null,null,null,1);
+      generateRoutineReports("ussr");generateRoutineReports("germany");
       setTimeout(function(){
         loading.classList.add("hide");setTimeout(function(){loading.style.display="none";},650);window.FRONT.ready=true;
         var check=window.FRONT.validate();document.body.dataset.ready="true";document.body.dataset.valid=String(check.ok);document.body.dataset.units=String(S.units.length);
@@ -1154,7 +1334,7 @@ function animate(now){
 window.FRONT={
   ready:false,
   get world(){return S;},
-  stats:function(){return S?{seed:S.seed,scenario:S.scenario.key,minute:S.minute,units:S.units.length,effective:S.units.filter(function(u){return!u.destroyed;}).length,objectives:S.objectives.map(function(o){return o.owner;}),forest:S.forestCount,representatives:S.representativeCount,wrecks:S.wrecks.length,lod:document.body.dataset.lod,calls:renderer?renderer.info.render.calls:0}:null;},
+  stats:function(){return S?{seed:S.seed,scenario:S.scenario.key,minute:S.minute,units:S.units.length,effective:S.units.filter(function(u){return!u.destroyed;}).length,objectives:S.objectives.map(function(o){return o.owner;}),reports:{ussr:S.reports.ussr.length,germany:S.reports.germany.length},dispersion:{ussr:dispersionStats("ussr"),germany:dispersionStats("germany")},forest:S.forestCount,representatives:S.representativeCount,wrecks:S.wrecks.length,lod:document.body.dataset.lod,calls:renderer?renderer.info.render.calls:0}:null;},
   step:function(minutes){if(!S)return null;var n=Math.max(STEP_MIN,minutes||STEP_MIN);for(var i=0;i<n;i+=STEP_MIN)stepSimulation(STEP_MIN);return this.stats();},
   seed:function(seed){forge(String(seed));},
   select:function(id){var u=S.units.find(function(x){return x.id===id||x.name===id;});selectUnit(u);return u||null;},
@@ -1162,6 +1342,7 @@ window.FRONT={
     var errors=[];if(SIZE!==15000)errors.push("sector scale");
     S.units.forEach(function(u){["x","z","personnel","morale","ammo","cargo"].forEach(function(k){if(!Number.isFinite(u[k]))errors.push(u.id+":"+k);});if(u.personnel<0||u.personnel>u.paperPersonnel)errors.push(u.id+":strength");if(!u.closeGroup||!u.figureMeshes)errors.push(u.id+":visual");});
     S.objectives.forEach(function(o){if(!o.name||Math.abs(o.x)>HALF||Math.abs(o.z)>HALF)errors.push("objective:"+o.id);});
+    if(!S.reports||!Array.isArray(S.reports.ussr)||!Array.isArray(S.reports.germany))errors.push("reports");
     return {ok:errors.length===0,errors:errors};
   }
 };
