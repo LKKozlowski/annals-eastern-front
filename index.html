@@ -61,7 +61,6 @@ button{color:inherit}
 .journal header{display:flex;align-items:center;padding:9px 11px;border-bottom:1px solid rgba(217,207,179,.16);border-top:3px solid var(--rule)}
 .journal.sov header{border-top-color:var(--red2)}.journal.ger header{border-top-color:var(--feld2)}
 .journal header span:first-child{font-family:Georgia,serif;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
-.journal header .live{margin-left:auto;font-size:8px;color:#98a092;text-transform:uppercase;letter-spacing:.08em}
 .report-list{max-height:210px;overflow:auto;padding:3px 10px 10px;scrollbar-width:thin}
 .report{font-family:Georgia,serif;font-size:11px;line-height:1.3;padding:6px 0;border-bottom:1px solid rgba(217,207,179,.08);color:#c9c5b6}
 .report .wire{font-family:Inter,system-ui,sans-serif;font-size:8px;color:#8e958b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
@@ -169,8 +168,8 @@ button{color:inherit}
 </aside>
 
 <div id="logs">
-  <section class="journal sov panel"><header><span>Soviet traffic</span><span class="live">STAVKA 0.1%</span></header><div id="sovEvents" class="report-list"></div></section>
-  <section class="journal ger panel"><header><span>German traffic</span><span class="live">OKH 0.1%</span></header><div id="gerEvents" class="report-list"></div></section>
+  <section class="journal sov panel"><header><span>Soviet traffic</span></header><div id="sovEvents" class="report-list"></div></section>
+  <section class="journal ger panel"><header><span>German traffic</span></header><div id="gerEvents" class="report-list"></div></section>
 </div>
 
 <div id="mapScale">1 kilometre<i></i></div>
