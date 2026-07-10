@@ -155,9 +155,10 @@ button{color:inherit}
   <section id="oobTab" class="tab hidden"><div id="oob"></div></section>
   <section id="notesTab" class="tab hidden">
     <p class="brief">This is a generated tactical vignette, not a reconstruction of a named battle. The force packages follow period organizational patterns, then apply the severe under-strength conditions common in 1943–44.</p>
-    <div class="note"><b>Map scale.</b> Counters are deliberately oversized. One grid square is 1 km; most maneuver units are battalions, with companies used for armor, engineers, and assault guns.</div>
+    <div class="note"><b>Map scale.</b> Counters are deliberately oversized. Zoom in to replace them with representative low-poly soldiers, guns, armored vehicles, and transport—not literal one-model-per-man formations.</div>
     <div class="note"><b>Combat model.</b> Fire, cover, entrenchment, suppression, morale, fatigue, ammunition, weather, and local numerical advantage interact. Casualties are indicative, not a historical prediction.</div>
-    <div class="note"><b>Omitted.</b> Corps-level artillery, air power, adjacent formations, medical evacuation, and most rear services are abstracted as availability modifiers.</div>
+    <div class="note"><b>Casualty display.</b> Personnel figures fade away without gore as effective strength falls. Destroyed vehicles leave dark wrecks; smoke dissipates while the wreck remains.</div>
+    <div class="note"><b>Omitted.</b> Corps-level artillery, air power, adjacent formations, medical evacuation, and rear services beyond the visible regimental transport columns are abstracted.</div>
   </section>
 </aside>
 
@@ -185,7 +186,7 @@ button{color:inherit}
   <button class="control" id="gridBtn" title="Toggle kilometre grid"># Grid</button>
   <button class="control" id="watchBtn" title="Follow significant events">◇ Watch</button>
   <button class="control" id="resetCam" title="Reset camera">⌂</button>
-  <span class="kbd">drag pan · right-drag rotate · wheel zoom · click unit · double-click map to order</span>
+  <span class="kbd">wheel zoom: counters → unit models · drag pan · right-drag rotate · click unit · double-click map to order</span>
   <div id="seedWrap"><label class="eyebrow" for="seedIn">Seed</label><input id="seedIn"><button class="control" id="reforgeBtn">Reforge</button></div>
 </div>
 
@@ -320,7 +321,8 @@ function makeWorld(seed){
     seed:seed,scenario:sc,rng:stream(seed+":sim"),detail:stream(seed+":detail"),noise:makeNoise(stream(seed+":terrain")),
     riverBase:rr(r,-1200,-350),riverPhase:rr(r,0,6.28),frontPhase:rr(r,0,6.28),
     minute:sc.start,speed:6,paused:false,view:"umpire",events:[],units:[],objectives:[],roads:[],villages:[],
-    sprites:[],orderLines:[],sceneReady:false,gridOn:true,manualOrders:0,lastHour:-1,selectedId:null
+    sprites:[],orderLines:[],modelPickables:[],closeGroups:[],wrecks:[],representativeCount:0,
+    sceneReady:false,gridOn:true,manualOrders:0,lastHour:-1,selectedId:null
   };
   var mainZ=rr(r,-700,800);
   var main=[];
@@ -363,6 +365,7 @@ function unit(o){
   o.fatigue=o.fatigue||0;
   o.ammo=o.ammo===undefined?.78:o.ammo;
   o.fuel=o.fuel===undefined?.8:o.fuel;
+  o.cargo=o.cargo===undefined?0:o.cargo;o.maxCargo=o.cargo;
   o.entrenchment=o.entrenchment||0;
   o.suppression=0;o.engaged=false;o.spottedBy={ussr:false,germany:false};o.firing=false;o.destroyed=false;o.manual=false;
   o.order=o.order||{type:"hold",x:o.x,z:o.z,label:"Hold present ground"};
@@ -398,6 +401,9 @@ function generateForces(r){
   unit({side:"germany",name:"II/Art.Rgt. (10.5 cm)",parent:"Divisional artillery group",kind:"artillery",echelon:"battalion",x:-6100,z:2500,
     paperPersonnel:520,personnel:variation(r,400,.12),weapons:"10.5 cm leFH 18 howitzers",guns:variation(r,12,.12),vehicles:0,attack:1.35,defense:.55,at:.2,morale:.73,ammo:rr(r,.52,.75),
     order:{type:"support",x:frontX(0),z:0,label:"Defensive fires"}});
+  unit({side:"germany",name:"Regimental supply column",parent:S.formations.germany.name,kind:"logistics",echelon:"column",x:-6550,z:-2850,
+    paperPersonnel:190,personnel:variation(r,145,.12),weapons:"Horse-drawn wagons, light trucks, field kitchens, fuel and ammunition trains",guns:0,vehicles:variation(r,13,.18),
+    attack:.08,defense:.34,at:.05,morale:.62,ammo:.35,fuel:.72,cargo:rr(r,.68,.92),order:{type:"support",x:-5200,z:-1800,label:"Maintain the regimental supply point"}});
 
   var starts=[-3000,0,3000];
   for(i=0;i<3;i++){
@@ -425,10 +431,13 @@ function generateForces(r){
   unit({side:"ussr",name:"Divisional artillery group",parent:"Rifle division artillery",kind:"artillery",echelon:"group",x:6500,z:-2400,
     paperPersonnel:680,personnel:variation(r,560,.1),weapons:"76 mm ZiS-3 and 122 mm howitzers, plus mortars",guns:variation(r,24,.14),vehicles:0,attack:1.62,defense:.5,at:.35,morale:.8,ammo:rr(r,.8,.97),
     order:{type:"support",x:frontX(0),z:0,label:"Rolling concentrations"}});
+  unit({side:"ussr",name:"Regimental transport column",parent:S.formations.ussr.name,kind:"logistics",echelon:"column",x:6550,z:2850,
+    paperPersonnel:230,personnel:variation(r,185,.12),weapons:"Trucks, horse carts, ammunition wagons, fuel bowsers and field kitchens",guns:0,vehicles:variation(r,18,.18),
+    attack:.08,defense:.32,at:.04,morale:.68,ammo:.4,fuel:.84,cargo:rr(r,.78,.98),order:{type:"support",x:5200,z:1600,label:"Maintain the forward distribution point"}});
 }
 
 function disposeScene(){
-  if(renderer){renderer.dispose();renderer.domElement.remove();}
+  if(renderer)renderer.dispose();
   scene=null;camera=null;renderer=null;terrainMesh=null;gridHelper=null;
 }
 function initThree(){
@@ -569,43 +578,155 @@ function buildObjectives(){
     sp.position.set(o.x,hAt(o.x,o.z)+260,o.z);sp.scale.set(340,340,1);sp.renderOrder=7;sp.userData.objective=o;scene.add(sp);o.sprite=sp;
   });
 }
+function Batch(){return {p:[],c:[]};}
+function batchTri(b,a,c,d,col){
+  var rgb=[(col>>16&255)/255,(col>>8&255)/255,(col&255)/255];
+  b.p.push(a[0],a[1],a[2],c[0],c[1],c[2],d[0],d[1],d[2]);
+  for(var i=0;i<3;i++)b.c.push(rgb[0],rgb[1],rgb[2]);
+}
+function batchQuad(b,a,c,d,e,col){batchTri(b,a,c,d,col);batchTri(b,a,d,e,col);}
+function batchBox(b,x,y,z,sx,sy,sz,col){
+  var x0=x-sx/2,x1=x+sx/2,y0=y-sy/2,y1=y+sy/2,z0=z-sz/2,z1=z+sz/2;
+  var a=[x0,y0,z0],c=[x1,y0,z0],d=[x1,y1,z0],e=[x0,y1,z0],f=[x0,y0,z1],g=[x1,y0,z1],h=[x1,y1,z1],i=[x0,y1,z1];
+  batchQuad(b,a,e,d,c,col);batchQuad(b,f,g,h,i,col);batchQuad(b,a,f,i,e,col);
+  batchQuad(b,c,d,h,g,col);batchQuad(b,e,i,h,d,col);batchQuad(b,a,c,g,f,col);
+}
+function batchMesh(b,opacity){
+  var g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(b.p,3));g.setAttribute("color",new THREE.Float32BufferAttribute(b.c,3));g.computeVertexNormals();
+  var m=new THREE.MeshLambertMaterial({vertexColors:true,transparent:true,opacity:opacity===undefined?1:opacity});
+  var mesh=new THREE.Mesh(g,m);mesh.castShadow=true;mesh.receiveShadow=true;return mesh;
+}
+function registerModel(mesh,u){
+  mesh.userData.unit=u;S.modelPickables.push(mesh);return mesh;
+}
+function soldierMesh(u,vr,index){
+  var b=Batch(),cloth=u.side==="ussr"?0x77734d:0x647066,cloth2=u.side==="ussr"?0x615f40:0x4d5b53;
+  var skin=0xb9906f,helmet=u.side==="ussr"?0x545b42:0x48534d,weapon=0x3a3025;
+  batchBox(b,-3,5,0,4,10,4,cloth2);batchBox(b,3,5,0,4,10,4,cloth2);
+  batchBox(b,0,15,0,12,11,7,cloth);batchBox(b,-7,14,0,3,11,4,cloth);batchBox(b,7,14,0,3,11,4,cloth);
+  batchBox(b,0,23,0,6,6,6,skin);batchBox(b,0,27,0,8,3,7,helmet);
+  batchBox(b,index%2?8:-8,13,-3,2,3,20,weapon);
+  var mesh=registerModel(batchMesh(b,1),u);mesh.userData.strengthThreshold=(index+.45)/(u.figureTarget||1);return mesh;
+}
+function vehicleMesh(u,style,wreck){
+  var b=Batch(),body=wreck?0x2f332f:(u.side==="ussr"?0x4e6649:0x626b60),body2=wreck?0x202420:(u.side==="ussr"?0x3d523a:0x4c564d),dark=0x252923;
+  if(style==="truck"||style==="cart"){
+    batchBox(b,0,11,2,54,8,108,dark);
+    if(style==="truck"){
+      batchBox(b,0,30,-31,49,37,42,body);batchBox(b,0,28,28,52,31,54,body2);batchBox(b,0,46,28,54,7,54,body);
+      for(var wz=-36;wz<=36;wz+=72){batchBox(b,-30,10,wz,10,24,20,dark);batchBox(b,30,10,wz,10,24,20,dark);}
+    }else{
+      batchBox(b,0,25,20,50,22,60,body2);batchBox(b,0,33,-42,18,22,42,body);
+      batchBox(b,-27,11,18,9,25,22,dark);batchBox(b,27,11,18,9,25,22,dark);
+      batchBox(b,0,24,-74,25,20,44,body);batchBox(b,0,11,-89,13,18,26,body2);
+    }
+  }else{
+    batchBox(b,-34,13,0,15,25,112,dark);batchBox(b,34,13,0,15,25,112,dark);
+    batchBox(b,0,29,0,70,29,105,body);batchBox(b,0,47,-7,58,21,66,body2);
+    if(style==="tank"){
+      batchBox(b,0,63,-11,46,25,43,body);batchBox(b,0,64,-56,8,8,70,body2);
+    }else{
+      batchBox(b,0,62,-15,55,27,50,body2);batchBox(b,0,63,-61,9,9,70,body2);
+    }
+  }
+  var mesh=batchMesh(b,1);if(wreck){mesh.rotation.z=rr(S.rng,-.12,.12);mesh.rotation.x=rr(S.rng,-.08,.08);}return mesh;
+}
+function gunMesh(u,heavy,wreck){
+  var b=Batch(),metal=wreck?0x292d29:(u.side==="ussr"?0x536a4d:0x5d685e),dark=0x292b27;
+  batchBox(b,-29,17,4,12,38,14,dark);batchBox(b,29,17,4,12,38,14,dark);
+  batchBox(b,0,23,0,54,27,8,metal);batchBox(b,0,28,-48,heavy?10:7,8,98,metal);
+  batchBox(b,-13,9,50,7,7,95,metal);batchBox(b,13,9,50,7,7,95,metal);
+  if(heavy)batchBox(b,0,34,-10,62,34,6,metal);
+  return batchMesh(b,1);
+}
+function crateMesh(u){
+  var b=Batch(),wood=0x705839,canvas=u.side==="ussr"?0x676643:0x5b655a;
+  batchBox(b,-26,10,-18,32,20,28,wood);batchBox(b,13,9,12,38,18,34,wood);batchBox(b,34,7,-24,22,14,22,canvas);
+  return batchMesh(b,1);
+}
+function buildUnitVisual(u){
+  var group=new THREE.Group(),vr=stream(S.seed+":visual:"+u.id);
+  u.figureMeshes=[];u.equipmentMeshes=[];
+  var count=u.kind==="infantry"||u.kind==="recon"?9:u.kind==="assault"||u.kind==="engineer"?6:u.kind==="logistics"?5:u.kind==="artillery"||u.kind==="antitank"?6:3;
+  u.figureTarget=count;
+  for(var i=0;i<count;i++){
+    var f=soldierMesh(u,vr,i),rank=Math.floor(i/3),file=i%3;
+    f.position.set((file-1)*65+rr(vr,-12,12),0,(rank-1)*75+rr(vr,-12,12));f.rotation.y=rr(vr,-.45,.45);f.userData.baseY=0;group.add(f);u.figureMeshes.push(f);
+  }
+  var equipment=0;
+  if(u.kind==="armor")equipment=clamp(Math.ceil(u.maxVehicles/4),1,3);
+  else if(u.kind==="artillery")equipment=3;
+  else if(u.kind==="antitank")equipment=2;
+  else if(u.kind==="logistics")equipment=3;
+  for(i=0;i<equipment;i++){
+    var eq;
+    if(u.kind==="armor"){
+      var style=u.name.indexOf("tank")>=0?"tank":"assault";eq=registerModel(vehicleMesh(u,style,false),u);
+    }else if(u.kind==="logistics"){
+      eq=registerModel(vehicleMesh(u,i===2?"cart":"truck",false),u);
+    }else eq=registerModel(gunMesh(u,u.kind==="artillery",false),u);
+    eq.position.set((i-(equipment-1)/2)*135,0,105+Math.abs(i-(equipment-1)/2)*35);eq.rotation.y=rr(vr,-.2,.2);
+    eq.userData.equipmentThreshold=(i+.35)/equipment;group.add(eq);u.equipmentMeshes.push(eq);
+  }
+  if(u.kind==="logistics"||u.kind==="engineer"){
+    var crates=registerModel(crateMesh(u),u);crates.position.set(-115,0,-75);group.add(crates);u.storesMesh=crates;
+  }
+  var ring=new THREE.Mesh(new THREE.RingBufferGeometry(155,178,40),new THREE.MeshBasicMaterial({color:COLORS[u.side],transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=3;group.add(ring);u.selectionRing=ring;
+  group.position.set(u.x,hAt(u.x,u.z)+3,u.z);group.visible=false;scene.add(group);u.closeGroup=group;S.closeGroups.push(group);
+  S.representativeCount+=count+equipment;
+}
 function symbolFor(ctx,u,x,y,w,h){
-  ctx.strokeStyle="#151b17";ctx.fillStyle="#151b17";ctx.lineWidth=4;
+  ctx.strokeStyle="#151b17";ctx.fillStyle="#151b17";ctx.lineWidth=6;
   if(u.kind==="infantry"||u.kind==="assault"||u.kind==="engineer"||u.kind==="recon"){
     ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w,y+h);ctx.moveTo(x+w,y);ctx.lineTo(x,y+h);ctx.stroke();
-    if(u.kind==="engineer"){ctx.beginPath();ctx.moveTo(x+w*.2,y+h*.5);ctx.lineTo(x+w*.8,y+h*.5);ctx.stroke();}
+    if(u.kind==="engineer"){ctx.beginPath();ctx.moveTo(x+w*.15,y+h*.5);ctx.lineTo(x+w*.85,y+h*.5);ctx.stroke();}
+    if(u.kind==="recon"){ctx.beginPath();ctx.arc(x+w/2,y+h/2,10,0,6.28);ctx.stroke();}
+    if(u.kind==="assault"){ctx.beginPath();ctx.arc(x+w/2,y+h/2,8,0,6.28);ctx.fill();}
   }else if(u.kind==="armor"){
     ctx.beginPath();ctx.ellipse(x+w/2,y+h/2,w*.42,h*.34,0,0,6.28);ctx.stroke();
   }else if(u.kind==="artillery"){
-    ctx.beginPath();ctx.arc(x+w/2,y+h/2,7,0,6.28);ctx.fill();
+    ctx.beginPath();ctx.moveTo(x+w*.5,y+h*.1);ctx.lineTo(x+w*.5,y+h*.9);ctx.stroke();ctx.beginPath();ctx.arc(x+w/2,y+h/2,10,0,6.28);ctx.fill();
   }else if(u.kind==="antitank"){
-    ctx.beginPath();ctx.moveTo(x+w*.15,y+h*.75);ctx.lineTo(x+w*.85,y+h*.25);ctx.moveTo(x+w*.15,y+h*.25);ctx.lineTo(x+w*.85,y+h*.75);ctx.stroke();
-    ctx.beginPath();ctx.arc(x+w/2,y+h/2,5,0,6.28);ctx.fill();
+    ctx.beginPath();ctx.moveTo(x+w*.12,y+h*.82);ctx.lineTo(x+w*.88,y+h*.18);ctx.moveTo(x+w*.12,y+h*.18);ctx.lineTo(x+w*.88,y+h*.82);ctx.stroke();
+    ctx.beginPath();ctx.arc(x+w/2,y+h/2,7,0,6.28);ctx.fill();
+  }else if(u.kind==="logistics"){
+    ctx.strokeRect(x+w*.12,y+h*.28,w*.68,h*.48);ctx.strokeRect(x+w*.8,y+h*.42,w*.17,h*.34);
+    ctx.beginPath();ctx.arc(x+w*.3,y+h*.84,8,0,6.28);ctx.arc(x+w*.8,y+h*.84,8,0,6.28);ctx.fill();
   }
 }
+function echelonMark(u){
+  if(u.echelon==="battalion")return "Ⅱ";if(u.echelon==="company"||u.echelon==="battery")return "Ⅰ";if(u.echelon==="group")return "Ⅲ";return "COL";
+}
 function unitTexture(u,selectedNow){
-  var c=document.createElement("canvas");c.width=384;c.height=240;var x=c.getContext("2d");
-  x.fillStyle=u.side==="ussr"?"#a74438":"#79877a";x.strokeStyle=selectedNow?"#f0cf78":"#ece3cb";x.lineWidth=selectedNow?12:6;
-  x.fillRect(40,32,304,166);x.strokeRect(40,32,304,166);
-  symbolFor(x,u,135,62,114,62);
-  x.fillStyle="#151b17";x.font="700 27px Inter, sans-serif";x.textAlign="center";x.fillText(u.name.split(" ")[0],192,154);
-  x.fillStyle="rgba(16,21,18,.86)";x.fillRect(40,198,304,34);x.fillStyle="#f0e9d8";x.font="600 18px Inter, sans-serif";
-  x.fillText(fmt(u.personnel)+(u.vehicles?" · "+u.vehicles+" AFV":""),192,222);
+  var c=document.createElement("canvas");c.width=512;c.height=320;var x=c.getContext("2d"),side=u.side==="ussr"?"#a74438":"#718073";
+  x.shadowColor="rgba(0,0,0,.45)";x.shadowBlur=15;x.shadowOffsetY=8;x.fillStyle="#d7d0b9";x.fillRect(35,35,442,240);
+  x.shadowColor="transparent";x.fillStyle=side;x.fillRect(35,35,442,45);
+  x.strokeStyle=selectedNow?"#f0cf78":"#f0ead8";x.lineWidth=selectedNow?10:5;x.strokeRect(35,35,442,240);
+  x.fillStyle="#f6efdb";x.textAlign="left";x.font="700 19px Inter, sans-serif";x.fillText(SIDE_NAMES[u.side].toUpperCase()+" · "+u.kind.toUpperCase(),52,64);
+  x.textAlign="right";x.fillText(echelonMark(u),460,64);
+  x.fillStyle="#17201c";x.textAlign="center";x.font="700 25px Georgia";var label=u.name.length>29?u.name.slice(0,28)+"…":u.name;x.fillText(label,256,112);
+  symbolFor(x,u,190,126,132,70);
+  x.fillStyle="#263029";x.fillRect(53,219,406,38);x.fillStyle="#f3ecda";x.font="600 18px Inter, sans-serif";
+  var equip=u.vehicles?(u.kind==="armor"?" · "+u.vehicles+" AFV":" · "+u.vehicles+" VEH"):"";
+  x.fillText(fmt(u.personnel)+equip+" · "+Math.round(u.morale*100)+"% MORALE",256,244);
+  x.fillStyle="#91805a";x.fillRect(53,263,406,7);x.fillStyle=side;x.fillRect(53,263,406*clamp(u.personnel/u.paperPersonnel,0,1),7);
   var t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;return t;
 }
 function updateUnitSprite(u,force){
   if(!u.sprite)return;
-  var key=Math.round(u.personnel/20)+"-"+u.vehicles+"-"+(selected&&selected.id===u.id);
+  var key=Math.round(u.personnel/20)+"-"+u.vehicles+"-"+Math.round(u.morale*10)+"-"+u.order.type+"-"+(selected&&selected.id===u.id);
   if(!force&&u.spriteKey===key)return;
   if(u.sprite.material.map)u.sprite.material.map.dispose();
   u.sprite.material.map=unitTexture(u,selected&&selected.id===u.id);u.sprite.material.needsUpdate=true;u.spriteKey=key;
 }
 function buildUnits(){
   S.units.forEach(function(u){
-    var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:unitTexture(u,false),transparent:true,depthTest:false}));
-    sp.position.set(u.x,hAt(u.x,u.z)+230,u.z);sp.scale.set(600,375,1);sp.renderOrder=10;sp.userData.unit=u;scene.add(sp);u.sprite=sp;S.sprites.push(sp);
+    var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:unitTexture(u,false),transparent:true,depthTest:false,opacity:1}));
+    sp.position.set(u.x,hAt(u.x,u.z)+270,u.z);sp.scale.set(720,450,1);sp.renderOrder=10;sp.userData.unit=u;scene.add(sp);u.sprite=sp;S.sprites.push(sp);
     var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(u.x,hAt(u.x,u.z)+24,u.z),new THREE.Vector3(u.order.x,hAt(u.order.x,u.order.z)+24,u.order.z)]);
     var line=new THREE.Line(g,new THREE.LineBasicMaterial({color:COLORS[u.side],transparent:true,opacity:.38,depthTest:false}));line.renderOrder=5;scene.add(line);u.orderLine=line;S.orderLines.push(line);
+    buildUnitVisual(u);
   });
 }
 function updateOrderLine(u){
@@ -613,6 +734,59 @@ function updateOrderLine(u){
   var p=u.orderLine.geometry.attributes.position;
   p.setXYZ(0,u.x,hAt(u.x,u.z)+28,u.z);p.setXYZ(1,u.order.x,hAt(u.order.x,u.order.z)+28,u.order.z);p.needsUpdate=true;
   u.orderLine.visible=u.order.type==="advance"||u.order.type==="retreat";
+}
+function spawnWreck(u){
+  if(!scene||!S.sceneReady)return;
+  var style=u.kind==="logistics"?(S.rng()<.25?"cart":"truck"):(u.name.indexOf("tank")>=0?"tank":"assault");
+  var mesh=vehicleMesh(u,style,true),a=rr(S.rng,0,6.28),rad=rr(S.rng,35,150),x=u.x+Math.cos(a)*rad,z=u.z+Math.sin(a)*rad;
+  mesh.position.set(x,hAt(x,z)+3,z);mesh.rotation.y=rr(S.rng,0,6.28);scene.add(mesh);
+  var smoke=new THREE.Mesh(new THREE.ConeBufferGeometry(32,170,7,1,true),new THREE.MeshBasicMaterial({color:0x373c38,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide}));
+  smoke.position.set(x,hAt(x,z)+95,z);scene.add(smoke);S.wrecks.push({mesh:mesh,smoke:smoke,born:S.minute});
+}
+function updateWrecks(){
+  S.wrecks.forEach(function(w){
+    var age=S.minute-w.born;
+    w.smoke.material.opacity=clamp(.3-age/300*.3,0,.3);w.smoke.visible=w.smoke.material.opacity>.015;
+    w.smoke.rotation.y+=.002;
+  });
+}
+function updateCloseVisual(u,dt){
+  if(!u.closeGroup)return;
+  u.closeGroup.position.set(u.x,hAt(u.x,u.z)+3,u.z);
+  var dx=u.order.x-u.x,dz=u.order.z-u.z;if(Math.hypot(dx,dz)>40)u.closeGroup.rotation.y=lerp(u.closeGroup.rotation.y,Math.atan2(dx,dz),.08);
+  var ratio=u.destroyed?0:clamp(u.personnel/u.paperPersonnel,0,1),moving=u.order.type==="advance"||u.order.type==="retreat";
+  u.figureMeshes.forEach(function(f,i){
+    var target=ratio>=f.userData.strengthThreshold?1:0;
+    f.material.opacity=lerp(f.material.opacity,target,clamp(dt*2.2,0,1));f.visible=f.material.opacity>.025;
+    f.position.y=f.userData.baseY+(moving?Math.sin(performance.now()*.004+i)*1.8:0);
+  });
+  var equipmentRatio=u.destroyed?0:(u.maxVehicles?clamp(u.vehicles/u.maxVehicles,0,1):1);
+  u.equipmentMeshes.forEach(function(eq){eq.visible=equipmentRatio>=eq.userData.equipmentThreshold;});
+  if(u.storesMesh)u.storesMesh.visible=!u.destroyed&&u.cargo>.03;
+  if(u.selectionRing)u.selectionRing.visible=!!selected&&selected.id===u.id;
+}
+function updateRepresentationLOD(dt){
+  var close=smooth((7600-cameraRig.distance)/3600);
+  S.units.forEach(function(u){
+    var known=!u.destroyed&&(S.view==="umpire"||u.side===S.view||u.spottedBy[S.view]);
+    var fading=u.destroyed&&u.eliminatedMinute!==undefined&&S.minute-u.eliminatedMinute<75;
+    var focusD=Math.hypot(u.x-cameraRig.target.x,u.z-cameraRig.target.z);
+    var showDetail=(known||fading)&&close>.035&&(focusD<5200||(selected&&selected.id===u.id));
+    if(u.closeGroup){u.closeGroup.visible=showDetail;if(showDetail)updateCloseVisual(u,dt);}
+    if(u.sprite){
+      var counterOpacity=1-smooth((7200-cameraRig.distance)/2600);
+      if(selected&&selected.id===u.id)counterOpacity=Math.max(counterOpacity,.24);
+      u.sprite.material.opacity=counterOpacity;
+      u.sprite.visible=known&&counterOpacity>.025;
+      var scale=lerp(720,500,close);u.sprite.scale.set(scale,scale*.625,1);
+    }
+    if(u.orderLine){
+      u.orderLine.material.opacity=lerp(.38,.12,close);
+      u.orderLine.visible=known&&(u.order.type==="advance"||u.order.type==="retreat");
+    }
+  });
+  updateWrecks();
+  document.body.dataset.lod=close>.55?"models":close>.08?"transition":"counters";
 }
 
 function resetCamera(){
@@ -636,8 +810,11 @@ function groundPoint(e){
   rayFromEvent(e);var hit=raycaster.intersectObject(terrainMesh,false);return hit.length?hit[0].point:null;
 }
 function pickUnit(e){
-  rayFromEvent(e);var hits=raycaster.intersectObjects(S.sprites,false);
-  for(var i=0;i<hits.length;i++)if(hits[i].object.visible)return hits[i].object.userData.unit;
+  rayFromEvent(e);var hits=raycaster.intersectObjects(S.sprites.concat(S.modelPickables),false);
+  for(var i=0;i<hits.length;i++){
+    var object=hits[i].object,shown=true,parent=object;while(parent){if(!parent.visible){shown=false;break;}parent=parent.parent;}
+    if(shown)return object.userData.unit;
+  }
   return null;
 }
 function bindInput(){
@@ -693,10 +870,10 @@ function coverAt(u){
   return clamp(c,.34,1.1);
 }
 function unitRange(u){
-  if(u.kind==="armor")return 1150;if(u.kind==="antitank")return 1050;if(u.kind==="assault")return 520;return 720;
+  if(u.kind==="armor")return 1150;if(u.kind==="antitank")return 1050;if(u.kind==="assault")return 520;if(u.kind==="logistics")return 260;return 720;
 }
 function firepower(u){
-  var manpower=Math.max(.2,u.personnel/u.paperPersonnel),vehicle=(u.vehicles||0)*.075,guns=(u.guns||0)*.018;
+  var manpower=Math.max(.2,u.personnel/u.paperPersonnel),vehicle=u.kind==="armor"?(u.vehicles||0)*.075:0,guns=(u.guns||0)*.018;
   return (manpower+vehicle+guns)*u.attack*u.morale*(.35+.65*u.ammo)*(1-u.suppression*.65);
 }
 function damage(shooter,target,minutes,artillery){
@@ -705,10 +882,14 @@ function damage(shooter,target,minutes,artillery){
   var combined=1;
   S.units.forEach(function(a){if(a!==shooter&&a.side===shooter.side&&!a.destroyed&&dist(a,target)<1100)combined+=.09;});
   var raw=fp*cover*rangeF*combined*rr(S.rng,.7,1.3)*(minutes/5)*(artillery?2.3:1.35);
-  if(target.kind==="armor"&&target.vehicles>0){
-    var killChance=(shooter.at||.3)*raw*.045;
-    if(S.rng()<killChance){target.vehicles=Math.max(0,target.vehicles-1);target.personnel=Math.max(0,target.personnel-ri(S.rng,2,5));logEvent("combat",shooter.name+" knocked out an armored vehicle of "+target.name+".",target.x,target.z);}
-    raw*=.32;
+  if((target.kind==="armor"||target.kind==="logistics")&&target.vehicles>0){
+    var killChance=(shooter.at||.3)*raw*.045*(target.kind==="logistics"?1.8:1);
+    if(S.rng()<killChance){
+      target.vehicles=Math.max(0,target.vehicles-1);target.personnel=Math.max(0,target.personnel-ri(S.rng,2,5));spawnWreck(target);
+      if(target.kind==="logistics"){target.cargo=clamp(target.cargo-.07,0,1);logEvent("combat",shooter.name+" destroyed a vehicle in "+target.name+".",target.x,target.z);}
+      else logEvent("combat",shooter.name+" knocked out an armored vehicle of "+target.name+".",target.x,target.z);
+    }
+    if(target.kind==="armor")raw*=.32;
   }
   var losses=Math.max(0,Math.round(raw));
   if(losses>0){
@@ -731,7 +912,7 @@ function updateMovement(u,minutes){
   if(moving){
     var dx=u.order.x-u.x,dz=u.order.z-u.z,d=Math.hypot(dx,dz);
     if(d>75){
-      var base=(u.kind==="armor"?92:u.kind==="recon"?67:u.kind==="artillery"?34:42);
+      var base=(u.kind==="armor"?92:u.kind==="recon"?67:u.kind==="logistics"?62:u.kind==="artillery"?34:42);
       var contact=enemy?(u.order.type==="retreat"?.75:.32):1;
       var pace=base*terrainMoveFactor(u)*(1-u.fatigue*.55)*contact*minutes;
       u.x+=dx/d*Math.min(d,pace);u.z+=dz/d*Math.min(d,pace);u.fatigue=clamp(u.fatigue+minutes*.00055,0,1);
@@ -743,9 +924,17 @@ function updateMovement(u,minutes){
   if(!enemy){u.suppression=clamp(u.suppression-minutes*.006,0,1);u.morale=clamp(u.morale+minutes*.00035,0,.9);}
   if((u.x>(u.side==="ussr"?5200:99999)||u.x<(u.side==="germany"?-5200:-99999))&&!enemy){
     u.ammo=clamp(u.ammo+minutes*.0012,0,1);u.fuel=clamp(u.fuel+minutes*.0007,0,1);
+    if(u.kind==="logistics")u.cargo=clamp(u.cargo+minutes*.0011,0,1);
+  }
+  if(u.kind!=="logistics"&&!enemy){
+    var supply=S.units.find(function(v){return v.side===u.side&&v.kind==="logistics"&&!v.destroyed&&v.cargo>.02&&dist(u,v)<6000;});
+    if(supply){
+      var need=Math.max(0,1-u.ammo)+Math.max(0,1-u.fuel),issued=Math.min(supply.cargo,minutes*.0009*need);
+      u.ammo=clamp(u.ammo+issued*.78,0,1);u.fuel=clamp(u.fuel+issued*.42,0,1);supply.cargo=clamp(supply.cargo-issued*.55,0,1);
+    }
   }
   if(u.personnel<=Math.max(18,u.paperPersonnel*.08)||((u.kind==="armor")&&u.vehicles<=0&&u.personnel<40)){
-    u.destroyed=true;u.sprite.visible=false;u.orderLine.visible=false;logEvent("combat",u.name+" ceased to exist as an effective formation.",u.x,u.z);
+    u.destroyed=true;u.eliminatedMinute=S.minute;u.sprite.visible=false;u.orderLine.visible=false;logEvent("combat",u.name+" ceased to exist as an effective formation.",u.x,u.z);
   }else if(u.morale<.25&&u.order.type!=="retreat")retreatUnit(u,"Morale collapse");
 }
 function updateCombat(minutes){
@@ -796,11 +985,11 @@ function activateGermanReserve(){
 function aiOrders(){
   var captured=S.objectives.filter(function(o){return o.owner==="ussr";}).length;
   S.units.forEach(function(u){
-    if(u.destroyed||u.manual||u.order.type==="retreat"||u.kind==="artillery")return;
+    if(u.destroyed||u.manual||u.order.type==="retreat"||u.kind==="artillery"||u.kind==="logistics")return;
     if(u.side==="ussr"&&u.order.type==="hold"&&nearestEnemy(u,950)===null){
       var target=S.objectives[Math.min(captured,S.objectives.length-1)];u.order={type:"advance",x:target.x,z:target.z,label:"Continue the regimental mission"};updateOrderLine(u);
     }
-    if(u.side==="germany"&&u.entrenchment<.42&&u.order.type==="hold")u.order={type:"dig",x:u.x,z:u.z,label:"Improve field positions"};
+    if(u.side==="germany"&&u.kind!=="logistics"&&u.entrenchment<.42&&u.order.type==="hold")u.order={type:"dig",x:u.x,z:u.z,label:"Improve field positions"};
   });
 }
 function stepSimulation(minutes){
@@ -813,9 +1002,9 @@ function summaryText(){
   return held+" of 3 objectives Soviet-held; "+fmt(s.current)+" Soviet and "+fmt(g.current)+" German personnel still effective";
 }
 function sideTotals(side){
-  var us=S.units.filter(function(u){return u.side===side;}),paper=0,current=0,armor=0;
-  us.forEach(function(u){paper+=u.paperPersonnel;current+=u.destroyed?0:u.personnel;armor+=u.destroyed?0:(u.vehicles||0);});
-  return {paper:paper,current:current,armor:armor};
+  var us=S.units.filter(function(u){return u.side===side;}),paper=0,current=0,armor=0,transport=0;
+  us.forEach(function(u){paper+=u.paperPersonnel;current+=u.destroyed?0:u.personnel;if(!u.destroyed){if(u.kind==="armor")armor+=u.vehicles||0;if(u.kind==="logistics")transport+=u.vehicles||0;}});
+  return {paper:paper,current:current,armor:armor,transport:transport};
 }
 
 function dateParts(){
@@ -875,12 +1064,13 @@ function renderInspector(){
   document.getElementById("unitName").textContent=selected.name;document.getElementById("unitParent").textContent=selected.parent;
   var body="";
   body+=statLine("Personnel",fmt(selected.personnel)+" / "+fmt(selected.paperPersonnel),selected.personnel/selected.paperPersonnel*100);
-  if(selected.maxVehicles)body+=statLine("Armored veh.",selected.vehicles+" / "+selected.maxVehicles,selected.vehicles/selected.maxVehicles*100,"#8ea58e");
+  if(selected.maxVehicles)body+=statLine(selected.kind==="armor"?"Armored veh.":"Transport",selected.vehicles+" / "+selected.maxVehicles,selected.vehicles/selected.maxVehicles*100,"#8ea58e");
+  if(selected.kind==="logistics")body+=statLine("Supply cargo",Math.round(selected.cargo*100)+"%",selected.cargo*100,"#c5a85d");
   body+=statLine("Morale",Math.round(selected.morale*100)+"%",selected.morale*100,"#8ea58e");
   body+=statLine("Ammunition",Math.round(selected.ammo*100)+"%",selected.ammo*100,"#c5a85d");
   body+=statLine("Fatigue",Math.round(selected.fatigue*100)+"%",selected.fatigue*100,"#a56e58");
   body+=statLine("Entrenched",Math.round(selected.entrenchment*100)+"%",selected.entrenchment*100,"#7d8a72");
-  body+='<div class="detail"><b>'+esc(selected.echelon.charAt(0).toUpperCase()+selected.echelon.slice(1))+".</b> "+esc(selected.weapons)+".<br><br><span class=\"eyebrow\">Current order</span><br>"+esc(selected.order.label)+"</div>";
+  body+='<div class="detail"><b>'+esc(selected.echelon.charAt(0).toUpperCase()+selected.echelon.slice(1))+".</b> "+esc(selected.weapons)+".<br><br><span class=\"eyebrow\">Close representation</span><br>Representative models are enlarged for legibility and fade with effective strength.<br><br><span class=\"eyebrow\">Current order</span><br>"+esc(selected.order.label)+"</div>";
   body+='<div class="orders"><button data-order="hold">Hold</button><button data-order="dig">Dig in</button><button data-order="advance">Advance</button><button data-order="follow">Follow camera</button></div>';
   document.getElementById("unitBody").innerHTML=body;
   document.querySelectorAll("[data-order]").forEach(function(b){b.onclick=function(){issueButtonOrder(b.dataset.order);};});
@@ -894,11 +1084,11 @@ function issueButtonOrder(type){
   updateOrderLine(selected);renderInspector();toast(selected.name+": "+selected.order.label);
 }
 function selectUnit(u){
-  var old=selected;selected=u||null;if(old)updateUnitSprite(old,true);if(selected){updateUnitSprite(selected,true);flyTo(selected.x,selected.z,Math.min(cameraRig.targetDistance,6200));}renderInspector();
+  var old=selected;selected=u||null;if(old)updateUnitSprite(old,true);if(selected){updateUnitSprite(selected,true);flyTo(selected.x,selected.z,Math.min(cameraRig.targetDistance,5200));}renderInspector();
 }
 function refreshWorld(){
   S.units.forEach(function(u){
-    if(!u.sprite)return;u.sprite.position.set(u.x,hAt(u.x,u.z)+230,u.z);updateOrderLine(u);updateUnitSprite(u,false);
+    if(!u.sprite)return;u.sprite.position.set(u.x,hAt(u.x,u.z)+270,u.z);updateOrderLine(u);updateUnitSprite(u,false);
     var visible=!u.destroyed&&(S.view==="umpire"||u.side===S.view||u.spottedBy[S.view]);
     u.sprite.visible=visible;u.orderLine.visible=visible&&(u.order.type==="advance"||u.order.type==="retreat");
   });
@@ -934,7 +1124,7 @@ function forge(seed){
   setTimeout(function(){
     makeWorld(seed);loadingStep("Placing roads, villages, and fieldworks…");
     setTimeout(function(){
-      initThree();loadingStep("Assembling depleted formations…");document.getElementById("seedIn").value=seed;
+      initThree();loadingStep("Assembling representative formations…");document.getElementById("seedIn").value=seed;
       history.replaceState(null,"","#s="+encodeURIComponent(seed));renderUI();
       logEvent("command",S.scenario.brief);
       logEvent("time","The generated sector opened at "+timeOnly(S.minute)+". Its formations are synthetic but period-shaped.");
@@ -956,6 +1146,7 @@ function animate(now){
     var active=S.units.filter(function(u){return u.engaged&&!u.destroyed;});if(active.length){var u=active[Math.floor((now/6000)%active.length)];flyTo(u.x,u.z,4600);}watchUntil=now+6000;
   }
   updateCamera(false);
+  updateRepresentationLOD(dt);
   var dp=dateParts();document.getElementById("clock").textContent=dp.date+" · "+dp.time;
   renderer.render(scene,camera);
 }
@@ -963,13 +1154,13 @@ function animate(now){
 window.FRONT={
   ready:false,
   get world(){return S;},
-  stats:function(){return S?{seed:S.seed,scenario:S.scenario.key,minute:S.minute,units:S.units.length,effective:S.units.filter(function(u){return!u.destroyed;}).length,objectives:S.objectives.map(function(o){return o.owner;}),forest:S.forestCount}:null;},
+  stats:function(){return S?{seed:S.seed,scenario:S.scenario.key,minute:S.minute,units:S.units.length,effective:S.units.filter(function(u){return!u.destroyed;}).length,objectives:S.objectives.map(function(o){return o.owner;}),forest:S.forestCount,representatives:S.representativeCount,wrecks:S.wrecks.length,lod:document.body.dataset.lod,calls:renderer?renderer.info.render.calls:0}:null;},
   step:function(minutes){if(!S)return null;var n=Math.max(STEP_MIN,minutes||STEP_MIN);for(var i=0;i<n;i+=STEP_MIN)stepSimulation(STEP_MIN);return this.stats();},
   seed:function(seed){forge(String(seed));},
   select:function(id){var u=S.units.find(function(x){return x.id===id||x.name===id;});selectUnit(u);return u||null;},
   validate:function(){
     var errors=[];if(SIZE!==15000)errors.push("sector scale");
-    S.units.forEach(function(u){["x","z","personnel","morale","ammo"].forEach(function(k){if(!Number.isFinite(u[k]))errors.push(u.id+":"+k);});if(u.personnel<0||u.personnel>u.paperPersonnel)errors.push(u.id+":strength");});
+    S.units.forEach(function(u){["x","z","personnel","morale","ammo","cargo"].forEach(function(k){if(!Number.isFinite(u[k]))errors.push(u.id+":"+k);});if(u.personnel<0||u.personnel>u.paperPersonnel)errors.push(u.id+":strength");if(!u.closeGroup||!u.figureMeshes)errors.push(u.id+":visual");});
     S.objectives.forEach(function(o){if(!o.name||Math.abs(o.x)>HALF||Math.abs(o.z)>HALF)errors.push("objective:"+o.id);});
     return {ok:errors.length===0,errors:errors};
   }

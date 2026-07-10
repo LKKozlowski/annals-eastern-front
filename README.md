@@ -27,12 +27,14 @@ http://localhost:8544/#s=first-morning
 - A deterministic 15,000 × 15,000 metre terrain model with a 1 km staff grid
 - Seeded lowland relief, river and bridge, roads, villages, woods, fieldworks, wire, and minefield belts
 - Three period vignettes: autumn 1943 mud, winter 1943–44, and a summer 1944 breakthrough
-- A depleted German 1944-type grenadier Kampfgruppe with two grenadier battalions, mobile reserve, assault guns, antitank guns, pioneers, and divisional artillery
-- A reinforced Soviet rifle regiment with three rifle battalions, an SMG company, sappers, antitank guns, attached T-34s/SU-76s, and divisional artillery
+- A depleted German 1944-type grenadier Kampfgruppe with two grenadier battalions, mobile reserve, assault guns, antitank guns, pioneers, divisional artillery, and a mixed horse/motor supply column
+- A reinforced Soviet rifle regiment with three rifle battalions, an SMG company, sappers, antitank guns, attached T-34s/SU-76s, divisional artillery, and a transport column
 - Per-unit paper and actual strength, morale, fatigue, suppression, ammunition, fuel, armor, antitank ability, and entrenchment
-- Terrain- and weather-sensitive movement, local combat, artillery support, spotting, retreat, resupply, objective capture, and basic tactical AI
+- Terrain- and weather-sensitive movement, local combat, artillery support, spotting, retreat, supply-column resupply, objective capture, and basic tactical AI
 - Umpire, Soviet, and German fog-of-war views
-- Selectable unit counters, inspectable TOE summaries, hold/dig/advance orders, watch mode, and a seeded combat journal
+- Redesigned operational counters that transition into representative low-poly soldiers, tanks, assault guns, artillery, antitank guns, trucks, horse carts, and supply dumps at close zoom
+- Non-graphic personnel-loss visualization: representative soldiers fade with effective strength; destroyed equipment leaves persistent wrecks with temporary smoke
+- Selectable counters and close models, inspectable TOE summaries, hold/dig/advance orders, watch mode, and a seeded combat journal
 - A small test API at window.FRONT with stats(), step(), seed(), select(), and validate()
 
 ## Is the premise plausible?
@@ -96,8 +98,8 @@ The best next implementation slice is the fire-plan editor plus command delay. T
 |---|---|
 | Drag | Pan the staff map |
 | Right-drag | Rotate and tilt |
-| Mouse wheel | Zoom |
-| Click a counter or OOB row | Inspect the unit |
+| Mouse wheel | Zoom between operational counters and representative unit models |
+| Click a counter, close model, or OOB row | Inspect the unit |
 | Double-click ground | Order the selected unit to advance |
 | Space | Pause/resume |
 | 1 / 2 / 3 | Set 1× / 6× / 30× |
@@ -108,6 +110,7 @@ The best next implementation slice is the fire-plan editor plus command delay. T
 
 - This is a game prototype, not a professional combat model.
 - Loss calculations are calibrated for readable multi-hour stories, not prediction.
+- Close models are enlarged representative vignettes, not one-for-one soldiers or true-scale equipment dispersal.
 - Generated place and formation names may resemble real ones by coincidence.
 - No political symbols are used; side colors and neutral military symbology carry the presentation.
 - Civilian suffering, atrocities, and the political context of the war are not simulated. Their omission should not be mistaken for historical unimportance.
