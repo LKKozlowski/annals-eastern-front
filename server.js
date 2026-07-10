@@ -1,4 +1,4 @@
-// Minimal static server for local preview of the ANNALS single-file app.
+// Minimal static server for local preview of THE SECTOR single-file app.
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = __dirname;
 const mime = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.txt':'text/plain' };
@@ -12,4 +12,4 @@ http.createServer((req, res) => {
     res.writeHead(200, {'Content-Type': mime[path.extname(f).toLowerCase()] || 'application/octet-stream'});
     res.end(data);
   });
-}).listen(8544, () => console.log('annals dev server: http://localhost:8544'));
+}).listen(8544, () => console.log('sector dev server: http://localhost:8544'));
